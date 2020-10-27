@@ -105,7 +105,7 @@ module.exports = bundler => {
             recurse(dirpath);
         };
 
-        function copySingleFile(bundleDir, dest, filepath) {
+        function copySingleFile(bundleDir, dest, filepath, replaceFiles) {
             if (fs.existsSync(dest)) {
                 const destStat = fs.statSync(dest);
                 const srcStat = fs.statSync(filepath);
@@ -115,6 +115,21 @@ module.exports = bundler => {
                 }
             } else {
                 fs.copyFileSync(filepath, dest);
+                if (replaceFiles && replaceFiles.files.includes(path.basename(filepath))) {
+                    const {field, value} = replaceFiles
+                    fs.readFile(dest, 'utf8', function (err,data) {
+                        if (err) {
+                          return console.log(err);
+                        }
+                        // can replace with value or can just get pkg version here, 
+                        // if its value we still have to write version number like 5 times (local, dev, prod)
+                        //in package.json does that not defeat purpose? or they'll be diff #s?
+                        let result = data.replace(field, value);
+                        fs.writeFile(dest, result, 'utf8', function (err) {
+                           if (err) return console.log(err);
+                        });
+                      });
+                }
             }
             // watch for changes?
             if (config.watcherGlob && bundler.watcher && minimatch(filepath, config.watcherGlob, config.globOptions)) {
@@ -129,15 +144,15 @@ module.exports = bundler => {
             );
         };
 
-        const copyFile = (filepath, bundleDir, excludeGlob) => {
+        const copyFile = (filepath, bundleDir, excludeGlob, replaceFiles) => {
             if (shouldBeExcluded(filepath, path.dirname(filepath), excludeGlob)) {
                 return;
             }
             const dest = path.join(bundleDir, path.basename(filepath));
-            copySingleFile(bundleDir, dest, filepath);
+            copySingleFile(bundleDir, dest, filepath, replaceFiles);
         };
 
-        const copyDir = (staticDir, bundleDir, excludeGlob) => {
+        const copyDir = (staticDir, bundleDir, excludeGlob, replaceFiles) => {
             const copy = (filepath, relative, filename) => {
                 if (shouldBeExcluded(filepath, staticDir, excludeGlob)) {
                     return;
@@ -149,7 +164,7 @@ module.exports = bundler => {
                         fs.mkdirSync(dest, {recursive: true});
                     }
                 } else {
-                    copySingleFile(bundleDir, dest, filepath);
+                    copySingleFile(bundleDir, dest, filepath, replaceFiles);
                 }
             };
             recurseSync(staticDir, copy);
@@ -173,16 +188,16 @@ module.exports = bundler => {
                 if (!fs.existsSync(copyTo)) {
                     fs.mkdirSync(copyTo, {recursive: true});
                 }
-
+                let replaceFiles = dir.replace ? dir.replace : null
                 let staticPath = path.join(pkg.pkgdir, dir.staticPath);
                 if (!fs.existsSync(staticPath)) {
                     pmLog(2, `Static path (file or directory) '${staticPath}' does not exist. Skipping.`);
                     return;
                 }
                 if (fs.statSync(staticPath).isDirectory()) {
-                    copyDir(staticPath, copyTo, excludeGlob);
+                    copyDir(staticPath, copyTo, excludeGlob, replaceFiles);
                 } else {
-                    copyFile(staticPath, copyTo, excludeGlob);
+                    copyFile(staticPath, copyTo, excludeGlob, replaceFiles);
                 }
             }
         }
