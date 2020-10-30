@@ -121,10 +121,7 @@ module.exports = bundler => {
                         if (err) {
                           return console.log(err);
                         }
-                        // can replace with value or can just get pkg version here, 
-                        // if its value we still have to write version number like 5 times (local, dev, prod)
-                        //in package.json does that not defeat purpose? or they'll be diff #s?
-                        let result = data.replace(field, value);
+                        let result = data.replace(field, pkg[value]);
                         fs.writeFile(dest, result, 'utf8', function (err) {
                            if (err) return console.log(err);
                         });
