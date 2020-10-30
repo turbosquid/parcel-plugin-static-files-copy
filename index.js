@@ -185,16 +185,15 @@ module.exports = bundler => {
                 if (!fs.existsSync(copyTo)) {
                     fs.mkdirSync(copyTo, {recursive: true});
                 }
-                let replaceFiles = dir.replace ? dir.replace : null
                 let staticPath = path.join(pkg.pkgdir, dir.staticPath);
                 if (!fs.existsSync(staticPath)) {
                     pmLog(2, `Static path (file or directory) '${staticPath}' does not exist. Skipping.`);
                     return;
                 }
                 if (fs.statSync(staticPath).isDirectory()) {
-                    copyDir(staticPath, copyTo, excludeGlob, replaceFiles);
+                    copyDir(staticPath, copyTo, excludeGlob, dir.replace);
                 } else {
-                    copyFile(staticPath, copyTo, excludeGlob, replaceFiles);
+                    copyFile(staticPath, copyTo, excludeGlob, dir.replace);
                 }
             }
         }
